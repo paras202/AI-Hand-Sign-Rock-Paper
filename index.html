@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Hand Sign Reading System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      overflow: hidden;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 25px;
+      padding: 20px 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 900px;
+      width: 100%;
+      max-height: 95vh;
+      overflow-y: auto;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #667eea;
+      font-size: 2em;
+      margin-bottom: 5px;
+      text-align: center;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 15px;
+      font-size: 1em;
+    }
+
+    .emoji-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 15px;
+      font-size: 2em;
+    }
+
+    .emoji-row span {
+      animation: bounce 2s infinite;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .emoji-row span:nth-child(1) { animation-delay: 0s; }
+    .emoji-row span:nth-child(2) { animation-delay: 0.2s; }
+    .emoji-row span:nth-child(3) { animation-delay: 0.4s; }
+
+    .emoji-row span:hover {
+      transform: scale(1.3);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    #webcam-container {
+      margin: 0 auto 15px;
+      width: 100%;
+      max-width: 320px;
+      height: 240px;
+      border: 3px solid #667eea;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #webcam-container canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .placeholder {
+      color: #999;
+      font-size: 1.2em;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #label-container {
+      text-align: center;
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #764ba2;
+      margin-bottom: 15px;
+      min-height: 35px;
+      padding: 10px;
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(253, 203, 110, 0.4);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #play-btn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      font-size: 16px;
+      padding: 12px 30px;
+      animation: glow 2s infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4); }
+      50% { box-shadow: 0 5px 30px rgba(245, 87, 108, 0.8); }
+    }
+
+    #game-result {
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-top: 15px;
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    #game-result.show {
+      display: block;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 2.5em;
+    }
+
+    .result-item {
+      text-align: center;
+    }
+
+    .result-label {
+      font-size: 0.4em;
+      color: #666;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .vs {
+      font-size: 0.6em;
+      color: #764ba2;
+      font-weight: 700;
+    }
+
+    .final-result {
+      font-size: 1.5em;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    .win {
+      background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+      color: #0a5f38;
+    }
+
+    .lose {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      color: #d63031;
+    }
+
+    .tie {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: #6c5ce7;
+    }
+
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      margin: 10px 0 15px 0;
+      padding: 10px;
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      border-radius: 12px;
+    }
+
+    .score-item {
+      text-align: center;
+    }
+
+    .score-label {
+      font-size: 0.85em;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: 1.6em;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 2em; }
+      .container { padding: 25px; }
+      #webcam-container { height: 250px; }
+      .emoji-row { font-size: 2em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 AI Hand Sign Detector</h1>
+    <p class="subtitle">Play Rock Paper Scissors with AI!</p>
+    
+    <div class="emoji-row">
+      <span title="Rock">✊</span>
+      <span title="Paper">✋</span>
+      <span title="Scissors">✌️</span>
+    </div>
+
+    <div class="score-board">
+      <div class="score-item">
+        <div class="score-label">You</div>
+        <div class="score-value" id="user-score">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">AI</div>
+        <div class="score-value" id="ai-score">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Ties</div>
+        <div class="score-value" id="tie-score">0</div>
+      </div>
+    </div>
+
+    <div id="webcam-container">
+      <div class="placeholder">📷 Camera will appear here</div>
+    </div>
+
+    <div id="label-container">Ready to play! Start the camera 📸</div>
+
+    <div class="button-group">
+      <button id="start-btn" onclick="startCamera()">🚀 Start Camera</button>
+      <button id="stop-btn" onclick="stopCamera()" disabled>⏸️ Stop Camera</button>
+    </div>
+
+    <button id="play-btn" onclick="playGame()" disabled>🎮 Play Game!</button>
+
+    <div id="game-result"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    const URL = "https://teachablemachine.withgoogle.com/models/eExpoi6lV/";
+    let model, webcam, labelContainer, maxPredictions;
+    let cameraActive = false;
+    let userGesture = "";
+    let scores = { user: 0, ai: 0, tie: 0 };
+
+    const gestureEmojis = {
+      "Rock": "✊",
+      "Paper": "✋",
+      "Scissors": "✌️"
+    };
+
+    async function startCamera() {
+      labelContainer = document.getElementById("label-container");
+      labelContainer.innerHTML = "⏳ Loading AI model...";
+      document.getElementById("start-btn").disabled = true;
+
+      try {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        webcam = new tmImage.Webcam(320, 240, true);
+        await webcam.setup();
+        await webcam.play();
+        cameraActive = true;
+        window.requestAnimationFrame(loop);
+
+        const container = document.getElementById("webcam-container");
+        container.innerHTML = "";
+        container.appendChild(webcam.canvas);
+        
+        labelContainer.innerHTML = "👋 Show your hand gesture!";
+        document.getElementById("stop-btn").disabled = false;
+        document.getElementById("play-btn").disabled = false;
+      } catch (error) {
+        labelContainer.innerHTML = "❌ Error starting camera. Please allow camera access.";
+        document.getElementById("start-btn").disabled = false;
+      }
+    }
+
+    async function loop() {
+      if (!cameraActive) return;
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      let highestProb = 0;
+      let bestClass = "";
+
+      for (let i = 0; i < prediction.length; i++) {
+        if (prediction[i].probability > highestProb) {
+          highestProb = prediction[i].probability;
+          bestClass = prediction[i].className;
+        }
+      }
+
+      // Normalize the class name to match our expected values
+      if (bestClass) {
+        bestClass = bestClass.trim();
+        // Handle common variations
+        if (bestClass.toLowerCase().includes("rock") || bestClass.toLowerCase().includes("stone")) {
+          bestClass = "Rock";
+        } else if (bestClass.toLowerCase().includes("paper")) {
+          bestClass = "Paper";
+        } else if (bestClass.toLowerCase().includes("scissor")) {
+          bestClass = "Scissors";
+        }
+      }
+
+      userGesture = bestClass || "Nothing";
+      const emoji = gestureEmojis[bestClass] || "❓";
+      const confidence = (highestProb * 100).toFixed(0);
+      
+      if (bestClass && gestureEmojis[bestClass]) {
+        labelContainer.innerHTML = `${emoji} Detected: <b>${bestClass}</b> (${confidence}% confidence)`;
+      } else {
+        labelContainer.innerHTML = `❓ Detected: <b>${bestClass || "Unknown"}</b> - Show Rock, Paper, or Scissors`;
+      }
+    }
+
+    function stopCamera() {
+      if (webcam && cameraActive) {
+        webcam.stop();
+        cameraActive = false;
+        document.getElementById("stop-btn").disabled = true;
+        document.getElementById("start-btn").disabled = false;
+        document.getElementById("play-btn").disabled = true;
+        labelContainer.innerHTML = "⏸️ Camera stopped";
+        document.getElementById("webcam-container").innerHTML = '<div class="placeholder">📷 Camera stopped</div>';
+      }
+    }
+
+    function playGame() {
+      if (!userGesture || userGesture === "Nothing" || !gestureEmojis[userGesture]) {
+        labelContainer.innerHTML = "⚠️ Please show a clear Rock, Paper, or Scissors hand sign first!";
+        return;
+      }
+
+      const gestures = ["Rock", "Paper", "Scissors"];
+      const aiChoice = gestures[Math.floor(Math.random() * 3)];
+      let result = "";
+      let resultClass = "";
+
+      if (userGesture === aiChoice) {
+        result = "It's a Tie! 🤝";
+        resultClass = "tie";
+        scores.tie++;
+      } else if (
+        (userGesture === "Rock" && aiChoice === "Scissors") ||
+        (userGesture === "Paper" && aiChoice === "Rock") ||
+        (userGesture === "Scissors" && aiChoice === "Paper")
+      ) {
+        result = "You Win! 🎉🏆";
+        resultClass = "win";
+        scores.user++;
+      } else {
+        result = "AI Wins! 🤖";
+        resultClass = "lose";
+        scores.ai++;
+      }
+
+      updateScoreboard();
+
+      const resultDiv = document.getElementById("game-result");
+      resultDiv.className = "show";
+      resultDiv.innerHTML = `
+        <div class="result-row">
+          <div class="result-item">
+            <div class="result-label">You</div>
+            ${gestureEmojis[userGesture]}
+          </div>
+          <div class="vs">VS</div>
+          <div class="result-item">
+            <div class="result-label">AI</div>
+            ${gestureEmojis[aiChoice]}
+          </div>
+        </div>
+        <div class="final-result ${resultClass}">${result}</div>
+      `;
+    }
+
+    function updateScoreboard() {
+      document.getElementById("user-score").textContent = scores.user;
+      document.getElementById("ai-score").textContent = scores.ai;
+      document.getElementById("tie-score").textContent = scores.tie;
+    }
+  </script>
+</body>
+</html>
